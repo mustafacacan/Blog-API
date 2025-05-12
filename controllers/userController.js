@@ -149,8 +149,8 @@ exports.deleteUser = async (req, res) => {
 
     res.locals.oldData = user.toJSON();
 
-    await Post.destroy({ where: { editorId: req.user.id } });
-    await user.update({ isActive: false });
+    await Post.destroy({ where: { editorId: req.user.id }, transaction });
+    await user.update({ isActive: false, transaction });
     await user.destroy({ transaction });
 
     await transaction.commit();
