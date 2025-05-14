@@ -1,34 +1,46 @@
-const { User, Permissions, Roles } = require("../../models");
+const {
+  Permissions,
+  RolePermissions,
+  UserRole,
+  User,
+  Roles,
+} = require("../../models");
 const Response = require("../../services/response");
 
-exports.checkPermissions = (requiredPermissions) => {
+const checkPermissions = (permissionName) => {
   return async (req, res, next) => {
     try {
-      const user = await User.findByPk(req.userId, {
-        include: [
-          {
-            model: Roles,
-            include: [{ model: Permissions }],
-          },
-        ],
+      const permission = await Permissions.findOne({
+        where: {
+          name: permissionName,
+        },
       });
 
-      if (!user) {
-        return new Response(null, "user not found").error404(res);
+      if (!permission) {
+        return new Response(null, `permission not found`).error404(res);
       }
 
-      const userPermissions = [];
+      const userId = req.user.id;
 
-      user.roles.forEach((role) => {
-        role.permissions.forEach((permissions) => {
-          userPermissions.push(permissions.name);
-        });
+      const userRole = await UserRole.findOne({
+        where: {
+          userId,
+        },
       });
 
-      if (!userPermissions.includes(requiredPermissions)) {
+      console.log(userRole.roleId);
+
+      const rolePermission = await RolePermissions.findOne({
+        where: {
+          roleId: userRole.roleId,
+          permissionId: permission.id,
+        },
+      });
+
+      if (!rolePermission) {
         return new Response(
           null,
-          "You do not have permission to perform this action."
+          `You do not have permission to perform this operation.`
         ).error401(res);
       }
 
@@ -42,3 +54,5 @@ exports.checkPermissions = (requiredPermissions) => {
     }
   };
 };
+
+module.exports = checkPermissions;

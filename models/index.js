@@ -6,7 +6,6 @@ const UserRole = require("./userRole");
 const Permissions = require("./permissions");
 const RolePermissions = require("./rolePermissions");
 const sequelize = require("../config/database");
-const RolePermissions = require("./rolePermissions");
 
 User.hasMany(Post, { foreignKey: "createdBy", as: "admin" });
 
@@ -25,13 +24,14 @@ Roles.belongsToMany(User, { through: "UserRole", foreignKey: "roleId" });
 
 Roles.belongsToMany(Permissions, {
   through: "RolePermissions",
-  foreignKey: "permissionId",
+  foreignKey: "roleId",
 });
 Permissions.belongsToMany(Roles, {
   through: "RolePermissions",
-  foreignKey: "roleId",
+  foreignKey: "permissionId",
 });
 
+/** 
 const permissions = [
   { name: "post_read" },
   { name: "post_create" },
@@ -40,15 +40,23 @@ const permissions = [
   { name: "user_read" },
   { name: "user_update" },
   { name: "user_delete" },
+  { name: "editor_read" },
+  { name: "editor_update" },
+  { name: "editor_delete" },
 ];
-const roles = [{ name: "user" }, { name: "editor" }, { name: "admin" }];
+const roles = [
+  { roleName: "user" },
+  { roleName: "editor" },
+  { roleName: "admin" },
+];
 
-await Roles.bulkCreate(roles, { ignoreDuplicates: true });
-await Permissions.bulkCreate(permissions, { ignoreDuplicates: true });
+Roles.bulkCreate(roles, { ignoreDuplicates: true });
+Permissions.bulkCreate(permissions, { ignoreDuplicates: true });
 
-// Log.hasMany(User, { foreignKey: "userId" });
 
-sequelize.sync({ force: true });
+sequelize.sync({ alter: true });
+
+ */
 
 module.exports = {
   User,

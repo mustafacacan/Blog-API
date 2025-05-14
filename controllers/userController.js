@@ -27,20 +27,23 @@ exports.register = async (req, res) => {
 
     const newUser = await User.create(value, { transaction });
 
-    const role = await Roles.findOne({
-      where: {
-        name: "user",
-      },
-    });
-
-    const newRole = await UserRole.create({
-      userId: newUser.id,
-      roleId: role,
-    });
-
     const token = jwt.sign({ id: newUser.id }, process.env.JWT_SECRET_KEY, {
       expiresIn: process.env.JWT_EXPIRES_IN,
     });
+
+    const role = await Roles.findOne({
+      where: {
+        roleName: "user",
+      },
+    });
+
+    await UserRole.create(
+      {
+        roleId: role.id,
+        userId: newUser.id,
+      },
+      { transaction }
+    );
 
     await transaction.commit();
 
@@ -68,7 +71,9 @@ exports.login = async (req, res) => {
       return new Response(null, error.details[0].message).error403(res);
     }
 
-    const user = await User.findOne({ where: { email: value.email } });
+    const user = await User.findOne({
+      where: { email: value.email },
+    });
 
     if (!user) {
       return new Response(
@@ -168,7 +173,16 @@ exports.deleteUser = async (req, res) => {
 
 exports.getUser = async (req, res) => {
   try {
-    const user = await User.findByPk(req.user.id, { paranoid: true });
+    const user = await User.findByPk(req.user.id, {
+      include: [
+        {
+          model: Roles,
+          through: { attributes: [] },
+          include: [{ model: Permissions, through: { attributes: [] } }],
+        },
+      ],
+      paranoid: true,
+    });
 
     if (!user) {
       return new Response(null, "User not found").error404(res);

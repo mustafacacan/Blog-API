@@ -1,4 +1,11 @@
-const { Roles, Permissions, User } = require("../models");
+const sequelize = require("../config/database");
+const {
+  Roles,
+  Permissions,
+  User,
+  UserRole,
+  RolePermissions,
+} = require("../models");
 const Response = require("../services/response");
 
 exports.createRole = async (req, res) => {
@@ -52,9 +59,14 @@ exports.addPermissionToRole = async (req, res) => {
       return new Response(null, "role or permission not found").error404(res);
     }
 
-    await role.addPermission(permission);
+    console.log(role, permission);
 
-    return new Response(null, "permission added to role").create(res);
+    const response = await RolePermissions.create({
+      roleId: role.id,
+      permissionId: permission.id,
+    });
+
+    return new Response(response, "permission added to role").create(res);
   } catch (error) {
     console.log(`Error occurred while adding permission to role: ${error}`);
     return new Response(
@@ -65,6 +77,7 @@ exports.addPermissionToRole = async (req, res) => {
 };
 
 exports.addRoleToUser = async (req, res) => {
+  const transaction = await sequelize.transaction();
   try {
     const { userId, roleId } = req.body;
 
@@ -75,10 +88,24 @@ exports.addRoleToUser = async (req, res) => {
       return new Response(null, "user or role not found").error404(res);
     }
 
-    await user.addRole(role);
+    const users = await UserRole.findOne({
+      where: {
+        userId: userId,
+      },
+    });
 
-    return new Response(null, "role assigned to user").create(res);
+    await users.update(
+      {
+        roleId: role.id,
+      },
+      { transaction }
+    );
+
+    await transaction.commit();
+
+    return new Response(users, "role assigned to user").create(res);
   } catch (error) {
+    await transaction.rollback();
     console.log(
       `An error occurred while assigning the role to the user: ${error}`
     );
@@ -100,7 +127,12 @@ exports.removeRoleFromUser = async (req, res) => {
       return new Response(null, `user or role not found`).error404(res);
     }
 
-    await user.removeRole(role);
+    await UserRole.destroy({
+      where: {
+        userId: user.id,
+        roleId: role.id,
+      },
+    });
 
     return new Response(null, "role removed from user").success(res);
   } catch (error) {
@@ -108,6 +140,72 @@ exports.removeRoleFromUser = async (req, res) => {
     return new Response(
       null,
       `Error occurred while removing role from user: ${error.messaage}`
+    ).error500(res);
+  }
+};
+
+exports.getRoleUsers = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    const roles = await User.findAndCountAll({
+      include: [
+        {
+          model: Roles,
+          attributes: ["id", "roleName"],
+          through: {
+            attributes: [],
+          },
+        },
+      ],
+      limit,
+      offset,
+    });
+
+    const totalPages = Math.ceil(roles.count / limit);
+
+    const response = {
+      roles: roles.rows,
+      totalPages,
+      currentPages: page,
+      totalRole: roles.count,
+    };
+
+    return new Response(response, "All roles to user").success(res);
+  } catch (error) {
+    console.log(`An error occurred while fetching roles: ${error}`);
+    return new Response(
+      null,
+      `An error occurred while fetching roles: ${error.messaage}`
+    ).error500(res);
+  }
+};
+
+exports.getAllRolesAndPermissions = async (req, res) => {
+  try {
+    const roles = await Roles.findAll({
+      include: [
+        {
+          model: Permissions,
+          attributes: ["id", "name"],
+          through: {
+            attributes: [],
+          },
+        },
+      ],
+    });
+
+    return new Response(
+      roles,
+      "All roles and permissions were successfully fetched"
+    ).success(res);
+  } catch (error) {
+    console.log(`Error while getting all roles and permissions: ${error}`);
+    return new Response(
+      null,
+      `Error while getting all roles and permissions: ${error.message}`
     ).error500(res);
   }
 };

@@ -1,7 +1,6 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/database");
 const bcrypt = require("bcrypt");
-const { use } = require("express/lib/router");
 const User = sequelize.define(
   "User",
   {

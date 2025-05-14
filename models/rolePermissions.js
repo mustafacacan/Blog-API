@@ -7,8 +7,14 @@ const RolePermissions = sequelize.define("RolePermissions", {
     primaryKey: true,
     autoIncrement: true,
   },
-  roleId: DataTypes.INTEGER,
-  permissionId: DataTypes.INTEGER,
+  roleId: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+  },
+  permissionId: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+  },
 });
 
 module.exports = RolePermissions;

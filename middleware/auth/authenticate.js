@@ -1,6 +1,6 @@
 const jwt = require("jsonwebtoken");
 const Response = require("../../services/response");
-const { User } = require("../../models");
+const { User, UserRole, Roles, Permissions } = require("../../models");
 require("dotenv").config();
 
 exports.authenticate = async (req, res, next) => {
@@ -29,10 +29,18 @@ exports.authenticate = async (req, res, next) => {
 exports.isAdmin = async (req, res, next) => {
   const userId = req.user.id;
 
-  const user = await User.findByPk(userId);
+  const user = await User.findByPk(userId, {
+    include: [
+      {
+        model: Roles,
+        where: {
+          roleName: "admin",
+        },
+      },
+    ],
+  });
 
-  if (user.role === "admin") {
-    console.log(user.role);
+  if (user) {
     next();
   } else {
     return new Response(null, "you do not have access authority").error401(res);

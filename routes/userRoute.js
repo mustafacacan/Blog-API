@@ -20,8 +20,18 @@ router.delete(
   chechkRole("user_delete"),
   deleteUser
 );
-router.get("/profile", authenticate, getUser);
-router.get("/user-posts-published", authenticate, getPostUserPublished);
-router.get("/user-posts-pending", authenticate, getPostUserPending);
+router.get("/profile", authenticate, chechkRole("user_read"), getUser);
+router.get(
+  "/user-posts-published",
+  authenticate,
+  chechkRole("post_editor"),
+  getPostUserPublished
+);
+router.get(
+  "/user-posts-pending",
+  authenticate,
+  chechkRole("post_editor"),
+  getPostUserPending
+);
 
 module.exports = router;
